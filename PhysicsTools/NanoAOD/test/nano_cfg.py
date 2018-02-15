@@ -13,7 +13,7 @@ process.GlobalTag.globaltag = autoCond['phase1_2017_realistic']
 
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
-process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(1000))
+process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(300))
 
 process.source = cms.Source("PoolSource", fileNames = cms.untracked.vstring())
 process.source.fileNames = [
@@ -34,17 +34,15 @@ process.nanoPath = cms.Path(process.nanoSequenceMC)
 #process.nanoPath = cms.Path(process.nanoSequence)
 #process.GlobalTag.globaltag = autoCond['run2_data']
 
-#process.out = cms.OutputModule("PoolOutputModule",
 process.out = cms.OutputModule("NanoAODOutputModule",
-    fileName = cms.untracked.string('nano_bbtag.root'),
+    fileName = cms.untracked.string('nano.root'),
     outputCommands = process.NanoAODEDMEventContent.outputCommands,
-    #outputCommands = cms.untracked.vstring('keep *'),
-   #compressionLevel = cms.untracked.int32(9),
+    #compressionLevel = cms.untracked.int32(9),
     #compressionAlgorithm = cms.untracked.string("LZMA"),
 
 )
 process.out1 = cms.OutputModule("NanoAODOutputModule",
-    fileName = cms.untracked.string('lzma_new.root'),
+    fileName = cms.untracked.string('lzma.root'),
     outputCommands = process.NanoAODEDMEventContent.outputCommands,
     compressionLevel = cms.untracked.int32(9),
     compressionAlgorithm = cms.untracked.string("LZMA"),
