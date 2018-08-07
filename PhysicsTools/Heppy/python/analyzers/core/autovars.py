@@ -11,7 +11,7 @@ class NTupleVariable:
        - name, type, help, default: obvious 
        - function: a function that taken an object computes the value to fill (e.g. lambda event : len(event.goodVertices))
     """
-    def __init__(self, name, function, type=float, help="", default=-99, mcOnly=False, filler=None):
+    def __init__(self, name, function, type=float, help="", default=-99, mcOnly=False, filler=None, storageType="default"):
         self.name = name
         self.function = function
         self.type = type
@@ -19,12 +19,13 @@ class NTupleVariable:
         self.default = default
         self.mcOnly  = mcOnly
         self.filler  = filler
+        self.storageType = storageType
     def __call__(self,object):
         ret = self.function(object)
         return ret
     def makeBranch(self,treeNumpy,isMC):
         if self.mcOnly and not isMC: return
-        treeNumpy.var(self.name, type=self.type, default=self.default, title=self.help, filler=self.filler)
+        treeNumpy.var(self.name, type=self.type, default=self.default, title=self.help, filler=self.filler, storageType=self.storageType)
     def fillBranch(self,treeNumpy,object,isMC):
         if self.mcOnly and not isMC: return
         treeNumpy.fill(self.name, self(object))
