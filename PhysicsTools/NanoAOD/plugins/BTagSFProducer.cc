@@ -59,8 +59,7 @@ class BTagSFProducer : public edm::stream::EDProducer<> {
                     // setup calibration                
                     BTagCalibration calib;
                     edm::FileInPath fip(weightFiles_[iDisc]);
-                    calib=BTagCalibration(discShortNames_[iDisc],fip.fullPath());
-                    
+                    calib=BTagCalibration(discShortNames_[iDisc],fip.fullPath());                    
                     // determine op
                     std::string opname;
                     if (operatingPoints_[iDisc] == "0" || operatingPoints_[iDisc] == "loose") {
