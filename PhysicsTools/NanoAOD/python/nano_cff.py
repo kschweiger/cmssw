@@ -155,6 +155,31 @@ def nanoAOD_addDeepBTagFor80X(process):
     return process
 
 def nanoAOD_customizeCommon(process):
+    ##########################################################################################
+    ################################## Force newer QGL version ###############################
+    # Will complain but it loads the module it tells you to load
+    from CondCore.DBCommon.CondDBSetup_cfi import CondDBSetup
+    process.qgl = cms.ESSource(
+        'PoolDBESSource',
+        CondDBSetup,
+        connect = cms.string('sqlite_fip:PhysicsTools/NanoAOD/data/QGL/QGL_cmssw8020_v2.db'),
+        toGet = cms.VPSet(
+            cms.PSet(
+                record = cms.string('QGLikelihoodRcd'),
+                tag    = cms.string('QGLikelihoodObject_cmssw8020_v2_AK4PFchs'),
+                label  = cms.untracked.string('QGL_AK4PFchs')
+            ),
+            cms.PSet(
+                record = cms.string('QGLikelihoodRcd'),
+                tag    = cms.string('QGLikelihoodObject_cmssw8020_v2_AK4PFchs_antib'),
+                label  = cms.untracked.string('QGL_AK4PFchs_antib')
+            ),
+        )
+    )
+    # Add an ESPrefer to override QGL that might be available from the global tag
+    process.es_prefer_qgl = cms.ESPrefer('PoolDBESSource', 'qgl')
+    ##########################################################################################
+    ##########################################################################################
     run2_miniAOD_80XLegacy.toModify(process, nanoAOD_addDeepBTagFor80X)
     return process
 
@@ -172,6 +197,7 @@ def nanoAOD_customizeMC(process):
         process.calibratedPatElectrons80X.isMC = cms.bool(True)
         process.calibratedPatPhotons80X.isMC = cms.bool(True)
     return process
+
 
 ### Era dependent customization
 _80x_sequence = nanoSequence.copy()
