@@ -11,7 +11,7 @@ class NTupleVariable:
        - name, type, help, default: obvious 
        - function: a function that taken an object computes the value to fill (e.g. lambda event : len(event.goodVertices))
     """
-    def __init__(self, name, function, type=float, help="", default=-99, mcOnly=False, filler=None):
+    def __init__(self, name, function, type=float, help="", default=-99, mcOnly=False, filler=None, storageType="default"):
         self.name = name
         self.function = function
         self.type = type
@@ -19,12 +19,13 @@ class NTupleVariable:
         self.default = default
         self.mcOnly  = mcOnly
         self.filler  = filler
+        self.storageType = storageType
     def __call__(self,object):
         ret = self.function(object)
         return ret
     def makeBranch(self,treeNumpy,isMC):
         if self.mcOnly and not isMC: return
-        treeNumpy.var(self.name, type=self.type, default=self.default, title=self.help, filler=self.filler)
+        treeNumpy.var(self.name, type=self.type, default=self.default, title=self.help, filler=self.filler, storageType=self.storageType)
     def fillBranch(self,treeNumpy,object,isMC):
         if self.mcOnly and not isMC: return
         treeNumpy.fill(self.name, self(object))
@@ -170,7 +171,7 @@ class NTupleCollection:
         self.sortAscendingBy  = sortAscendingBy
         self.sortDescendingBy = sortDescendingBy
     def makeBranchesScalar(self,treeNumpy,isMC):
-        if not isMC and self.objectType.mcOnly: return
+        if not isMC and self.mcOnly: return
         treeNumpy.var("n"+self.name, int)
         allvars = self.objectType.allVars(isMC)
         for v in allvars:
@@ -179,7 +180,7 @@ class NTupleCollection:
                 if self.help: h = "%s for %s [%d]" % ( h if h else v.name, self.help, i-1 )
                 treeNumpy.var("%s%d_%s" % (self.name, i, v.name), type=v.type, default=v.default, title=h, filler=v.filler)
     def makeBranchesVector(self,treeNumpy,isMC):
-        if not isMC and self.objectType.mcOnly: return
+        if not isMC and self.mcOnly: return
         treeNumpy.var("n"+self.name, int)
         allvars = self.objectType.allVars(isMC)
         for v in allvars:
@@ -188,7 +189,7 @@ class NTupleCollection:
             name="%s_%s" % (self.name, v.name) if v.name != "" else self.name
             treeNumpy.vector(name, "n"+self.name, self.maxlen, type=v.type, default=v.default, title=h, filler=v.filler)
     def fillBranchesScalar(self,treeNumpy,collection,isMC):
-        if not isMC and self.objectType.mcOnly: return
+        if not isMC and self.mcOnly: return
         if self.filter != None: collection = [ o for o in collection if self.filter(o) ]
         if self.sortAscendingBy != None: collection  = sorted(collection, key=self.sortAscendingBy)
         if self.sortDescendingBy != None: collection = sorted(collection, key=self.sortDescendingBy, reverse=True)
@@ -200,7 +201,7 @@ class NTupleCollection:
             for v in allvars:
                 treeNumpy.fill("%s%d_%s" % (self.name, i+1, v.name), v(o))
     def fillBranchesVector(self,treeNumpy,collection,isMC):
-        if not isMC and self.objectType.mcOnly: return
+        if not isMC and self.mcOnly: return
         if self.filter != None: collection = [ o for o in collection if self.filter(o) ]
         if self.sortAscendingBy != None: collection  = sorted(collection, key=self.sortAscendingBy)
         if self.sortDescendingBy != None: collection = sorted(collection, key=self.sortDescendingBy, reverse=True)
