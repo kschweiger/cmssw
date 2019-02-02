@@ -110,7 +110,7 @@ genWeightsTable = cms.EDProducer("GenWeightsTableProducer",
     namedWeightLabels = cms.vstring(),
     lheWeightPrecision = cms.int32(14),
     maxPdfWeights = cms.uint32(150), 
-    debug = cms.untracked.bool(True),
+    debug = cms.untracked.bool(False),
 )
 lheInfoTable = cms.EDProducer("LHETablesProducer",
     lheInfo = cms.InputTag("externalLHEProducer"),
@@ -120,14 +120,16 @@ lheInfoTable = cms.EDProducer("LHETablesProducer",
 
 l1bits=cms.EDProducer("L1TriggerResultsConverter", src=cms.InputTag("gtStage2Digis"), legacyL1=cms.bool(False))
 
+content = cms.EDAnalyzer("EventContentAnalyzer")
+
 nanoSequence = cms.Sequence(
-        nanoMetadata + jetSequence + muonSequence + tauSequence + electronSequence+photonSequence+vertexSequence+metSequence+boostedSequence+
+        nanoMetadata + jetSequence + muonSequence + tauSequence + electronSequence+photonSequence+vertexSequence+metSequence+prefiringweight+boostedSequence+
         isoTrackSequence + # must be after all the leptons 
-        linkedObjects  +
+        linkedObjects  + 
         jetTables + muonTables + tauTables + electronTables + photonTables +  globalTables +vertexTables+ metTables+simpleCleanerTable + triggerObjectTables + isoTrackTables +
 	l1bits + boostedTables)
 
-nanoSequenceMC = cms.Sequence(genParticleSequence + particleLevelSequence + nanoSequence + jetMC + muonMC + electronMC + photonMC + tauMC + metMC + ttbarCatMCProducers +  globalTablesMC + btagWeightTable + genWeightsTable + genParticleTables + particleLevelTables + lheInfoTable  + ttbarCategoryTable + boostedTables)
+nanoSequenceMC = cms.Sequence(genParticleSequence + particleLevelSequence + nanoSequence + jetMC + muonMC + electronMC + photonMC + tauMC + metMC + ttbarCatMCProducers +  globalTablesMC + btagWeightTable + genWeightsTable + genParticleTables + particleLevelTables + lheInfoTable  + ttbarCategoryTable +L1PrefiringTable+ boostedTables)
 
 
 from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
@@ -180,6 +182,7 @@ def nanoAOD_customizeCommon(process):
     process.es_prefer_qgl = cms.ESPrefer('PoolDBESSource', 'qgl')
     ##########################################################################################
     ##########################################################################################
+    
     run2_miniAOD_80XLegacy.toModify(process, nanoAOD_addDeepBTagFor80X)
     return process
 
