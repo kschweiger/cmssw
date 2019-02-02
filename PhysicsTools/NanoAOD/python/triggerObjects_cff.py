@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from PhysicsTools.NanoAOD.common_cff import *
 from Configuration.Eras.Modifier_run2_miniAOD_80XLegacy_cff import run2_miniAOD_80XLegacy
 import copy
 
@@ -13,6 +14,17 @@ run2_miniAOD_80XLegacy.toModify(
   patTriggerObjectsStandAlone = "selectedPatTrigger",
   unpackFilterLabels = False 
 )
+
+
+prefiringweight = cms.EDProducer("L1ECALPrefiringWeightProducer",
+                                 ThePhotons = cms.InputTag("slimmedPhotons"),
+	                         TheJets = cms.InputTag("slimmedJets"),
+                                 L1Maps = cms.string('L1PrefiringMaps.root'), # update this line with the location of this file
+                                 DataEra = cms.string("2017BtoF"), #Use 2016BtoH for 2016
+                                 UseJetEMPt = cms.bool(False), #can be set to true to use jet prefiring maps parametrized vs pt(em) instead of pt
+	                         PrefiringRateSystematicUncty = cms.double(0.2) #Minimum relative prefiring uncty per object
+                                 )
+
 
 triggerObjectTable = cms.EDProducer("TriggerObjectTableProducer",
     name= cms.string("TrigObj"),
@@ -133,6 +145,14 @@ triggerObjectTable = cms.EDProducer("TriggerObjectTableProducer",
         ),
 
     ),
+)
+
+L1PrefiringTable = cms.EDProducer("GlobalVariablesTableProducer",
+                                    variables = cms.PSet(
+                                        L1PrefireWeight = ExtVar( cms.InputTag("prefiringweight:nonPrefiringProb"), "double", doc = "Nominal L1 Prefire weight"),
+                                        L1PrefireWeight_Up = ExtVar( cms.InputTag("prefiringweight:nonPrefiringProbUp"), "double", doc = "Up L1 Prefire weight"),
+                                        L1PrefireWeight_Down = ExtVar( cms.InputTag("prefiringweight:nonPrefiringProbDown"), "double", doc = "Down L1 Prefire weight")
+                                    )
 )
 
 # ERA-dependent configuration
