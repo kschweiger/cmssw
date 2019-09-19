@@ -15,7 +15,7 @@
 class  MaterialBudgetCategorizer {
 
  public:
-  MaterialBudgetCategorizer(std::string mode);
+  MaterialBudgetCategorizer(std::string mode, std::string trackerGeometry);
   
   int volume(std::string s){return theVolumeMap[s];}
   int material(std::string s){return theMaterialMap[s];}
@@ -27,6 +27,10 @@ class  MaterialBudgetCategorizer {
   const std::vector<float> & HGCalx0fraction(std::string s){return theHGCalX0Map[s];}
   const std::vector<float> & HGCall0fraction(std::string s){return theHGCalL0Map[s];}
 
+  unsigned int nCategories;
+  std::map<std::string, int> materialIDs;
+  std::vector<std::string> catNames;
+  
  private:
   void buildMaps();
   void buildCategoryMap(std::string theMaterialFileName, std::map<std::string,std::vector<float> >& theMap);
@@ -40,6 +44,8 @@ class  MaterialBudgetCategorizer {
   std::map<std::string,std::vector<float> > theHGCalX0Map;
   std::map<std::string,std::vector<float> > theHGCalL0Map;
 
+  std::string useTrackerGeometry;
+  
 };
 
 #endif

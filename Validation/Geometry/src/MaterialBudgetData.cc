@@ -12,6 +12,7 @@ MaterialBudgetData::MaterialBudgetData()
   allStepsToTree = false;
   isHGCal = false;
   densityConvertionFactor = 6.24E18;
+  trackerGeometry = "NotSet";
 }
 
 MaterialBudgetData::~MaterialBudgetData() = default;
@@ -21,6 +22,10 @@ void MaterialBudgetData::SetAllStepsToTree()
   allStepsToTree = true;
 }
 
+void MaterialBudgetData::SetTrackerGeometry(std::string geometry){
+  trackerGeometry = geometry;
+    std::cout << "Set geometry in Data to " << trackerGeometry << std::endl;
+}
 
 void MaterialBudgetData::dataStartTrack( const G4Track* aTrack )
 {
@@ -29,11 +34,33 @@ void MaterialBudgetData::dataStartTrack( const G4Track* aTrack )
 
   if( myMaterialBudgetCategorizer == nullptr){
     if(isHGCal){
-      myMaterialBudgetCategorizer = std::make_unique<MaterialBudgetCategorizer>("HGCal"); 
+      myMaterialBudgetCategorizer = std::make_unique<MaterialBudgetCategorizer>("HGCal", trackerGeometry); 
     } else {
-      myMaterialBudgetCategorizer = std::make_unique<MaterialBudgetCategorizer>("Tracker"); 
+      myMaterialBudgetCategorizer = std::make_unique<MaterialBudgetCategorizer>("Tracker", trackerGeometry); 
     }
   }
+
+
+  //Reset tracker vectors
+  theTrackerFractionsMB.clear();
+  theTrackerFractionsIL.clear();
+  theTrackerValuesMB.clear();
+  theTrackerValuesIL.clear();
+  
+  for (unsigned int i=0; i < myMaterialBudgetCategorizer->nCategories; i++){
+    theTrackerFractionsMB.push_back(0.0);
+    theTrackerFractionsIL.push_back(0.0);
+    theTrackerValuesMB.push_back(0.0);
+    theTrackerValuesIL.push_back(0.0);
+  }
+  for (int iSteps = 0; iSteps < MAXNUMBERSTEPS;  iSteps++){
+    for (unsigned int i=0; i < myMaterialBudgetCategorizer->nCategories; i++){
+      theTrackerValuesDmb[iSteps].push_back(0.0);
+      theTrackerValuesDil[iSteps].push_back(0.0);
+    }
+  }
+  
+  
   
   theStepN=0;
   theTotalMB=0;
@@ -225,27 +252,37 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   int volumeID   = myMaterialBudgetCategorizer->volume( volumeName );
   int materialID = myMaterialBudgetCategorizer->material( materialName );
 
+  std::cout  << "MaterialBudgetData: Volume ID " << volumeID 
+	     << " Material ID " << materialID << std::endl;
+  
   LogDebug("MaterialBudget") << "MaterialBudgetData: Volume ID " << volumeID 
 			     << " Material ID " << materialID;
 
   // FIXME: Both volume ID and material ID are zeros, so this part is not executed leaving all
   // values as zeros. 
-
+  
   if (!isHGCal){
 
+    unsigned int nCats = myMaterialBudgetCategorizer->nCategories;
+    
     bool isCtgOk = !myMaterialBudgetCategorizer->x0fraction(materialName).empty()
       && !myMaterialBudgetCategorizer->l0fraction(materialName).empty()
-      && (myMaterialBudgetCategorizer->x0fraction(materialName).size() == 7) /*7 Categories*/
-      && (myMaterialBudgetCategorizer->l0fraction(materialName).size() == 7);
-   
-    if(!isCtgOk) 
+      && (myMaterialBudgetCategorizer->x0fraction(materialName).size() == nCats) /*7 Categories*/
+      && (myMaterialBudgetCategorizer->l0fraction(materialName).size() == nCats);
+    
+    std::map<std::string, int> materialIDMap = myMaterialBudgetCategorizer->materialIDs;
+    if(!isCtgOk)
       {
 	if(materialName.compare("Air") == 0){
-	  theAirFractionMB = 1.f;
-	  theAirFractionIL = 1.f;
+	  theTrackerFractionsMB.at(materialIDMap["AIR"]) = 1.f;
+	  theTrackerFractionsIL.at(materialIDMap["AIR"]) = 1.f;
+	  theAirFractionMB = 1.f; //DEPRICATED
+	  theAirFractionIL = 1.f; //DEPRICATED
 	} else {
-	  theOtherFractionMB = 1.f;
-	  theOtherFractionIL = 1.f;
+	  theTrackerFractionsMB.at(materialIDMap["OTH"]) = 1.f;
+	  theTrackerFractionsIL.at(materialIDMap["OTH"]) = 1.f;
+	  theOtherFractionMB = 1.f; //DEPRICATED
+	  theOtherFractionIL = 1.f; //DEPRICATED
 	  edm::LogWarning("MaterialBudget")
 	    << "MaterialBudgetData: Material forced to 'Other': " << materialName 
 	    << " in volume " << volumeName << ". Check Categorization.";
@@ -253,25 +290,35 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
       }
     else 
       {
+	for (auto x: myMaterialBudgetCategorizer->catNames){
+	  theTrackerFractionsMB.at(materialIDMap[x]) = myMaterialBudgetCategorizer->x0fraction(materialName)[materialIDMap[x]];
+	}
 	theSupportFractionMB     = myMaterialBudgetCategorizer->x0fraction(materialName)[0];
 	theSensitiveFractionMB   = myMaterialBudgetCategorizer->x0fraction(materialName)[1];
 	theCablesFractionMB      = myMaterialBudgetCategorizer->x0fraction(materialName)[2];
 	theCoolingFractionMB     = myMaterialBudgetCategorizer->x0fraction(materialName)[3];
-	theElectronicsFractionMB = myMaterialBudgetCategorizer->x0fraction(materialName)[4];
-	theOtherFractionMB       = myMaterialBudgetCategorizer->x0fraction(materialName)[5];
-	theAirFractionMB         = myMaterialBudgetCategorizer->x0fraction(materialName)[6];
-      
+	theElectronicsFractionMB = 0;//myMaterialBudgetCategorizer->x0fraction(materialName)[4];
+	theOtherFractionMB       = myMaterialBudgetCategorizer->x0fraction(materialName)[4];
+	theAirFractionMB         = myMaterialBudgetCategorizer->x0fraction(materialName)[5];
+
+	// std::cout << "----------------------- MATERIAL : " << materialName << " -----------------------" <<std::endl;
+	// std::cout << "SENSOR NEW " <<  theTrackerFractionsMB.at(0) << " Old "  << theSupportFractionMB << std::endl;
+	// std::cout << "OTHER  NEW " <<  theTrackerFractionsMB.at(4) << " Old "  << theOtherFractionMB << std::endl;
+	// std::cout << "AIR    NEW " <<  theTrackerFractionsMB.at(5) << " Old "  << theAirFractionMB << "(" << myMaterialBudgetCategorizer->x0fraction(materialName)[5] << ")" << std::endl;
+	
 	if(theOtherFractionMB > 0.f)
 	  edm::LogWarning("MaterialBudget") << "MaterialBudgetData: Material found with no category: " << materialName 
 					    << " in volume " << volumeName;
-
+	for (auto x: myMaterialBudgetCategorizer->catNames){
+	  theTrackerFractionsIL.at(materialIDMap[x]) = myMaterialBudgetCategorizer->l0fraction(materialName)[materialIDMap[x]];
+	}
 	theSupportFractionIL     = myMaterialBudgetCategorizer->l0fraction(materialName)[0];
 	theSensitiveFractionIL   = myMaterialBudgetCategorizer->l0fraction(materialName)[1];
 	theCablesFractionIL      = myMaterialBudgetCategorizer->l0fraction(materialName)[2];
 	theCoolingFractionIL     = myMaterialBudgetCategorizer->l0fraction(materialName)[3];
-	theElectronicsFractionIL = myMaterialBudgetCategorizer->l0fraction(materialName)[4];
-	theOtherFractionIL       = myMaterialBudgetCategorizer->l0fraction(materialName)[5];
-	theAirFractionIL         = myMaterialBudgetCategorizer->l0fraction(materialName)[6];
+	theElectronicsFractionIL = 0;//myMaterialBudgetCategorizer->l0fraction(materialName)[4];
+	theOtherFractionIL       = myMaterialBudgetCategorizer->l0fraction(materialName)[4];
+	theAirFractionIL         = myMaterialBudgetCategorizer->l0fraction(materialName)[5];
 
 	if(theOtherFractionIL > 0.f)
 	  edm::LogWarning("MaterialBudget") << "MaterialBudgetData: Material found with no category: " << materialName 
@@ -334,7 +381,7 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   
   float dmb = steplen/radlen;
   float dil = steplen/intlen;
-  
+
   G4VPhysicalVolume*       pv                = aStep->GetPreStepPoint()->GetPhysicalVolume();
   const G4VTouchable*      t                 = aStep->GetPreStepPoint()->GetTouchable();
   const G4ThreeVector&            objectTranslation = t->GetTranslation();
@@ -362,6 +409,14 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
     theCoolingDmb[theStepN]     = (dmb * theCoolingFractionMB);
     theElectronicsDmb[theStepN] = (dmb * theElectronicsFractionMB);
     theOtherDmb[theStepN]       = (dmb * theOtherFractionMB);
+
+    if (!isHGCal){
+      for (auto x: myMaterialBudgetCategorizer->catNames){
+	theTrackerValuesDmb[theStepN].at(myMaterialBudgetCategorizer->materialIDs[x]) = (dmb * theTrackerFractionsMB.at(myMaterialBudgetCategorizer->materialIDs[x]));
+	theTrackerValuesDil[theStepN].at(myMaterialBudgetCategorizer->materialIDs[x]) = (dil * theTrackerFractionsIL.at(myMaterialBudgetCategorizer->materialIDs[x]));
+      }   
+    }
+    
     //HGCal
     theAirDmb[theStepN]                 = (dmb * theAirFractionMB);
     theCablesDmb[theStepN]              = (dmb * theCablesFractionMB);
@@ -565,9 +620,11 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   theCoolingMB     += (dmb * theCoolingFractionMB);
   theElectronicsMB += (dmb * theElectronicsFractionMB);
   theOtherMB       += (dmb * theOtherFractionMB);
-
+  
   //HGCal
+  //std::cout << "Before: theAirMB = " << theAirMB << "-- += " << dmb * theAirFractionMB << "(" << dmb << ", " << theAirFractionMB << ")" << std::endl;
   theAirMB                 += (dmb * theAirFractionMB);
+  //std::cout << "After: theAirMB = " << theAirMB << "-- += " << dmb * theAirFractionMB << "(" << dmb << ", " << theAirFractionMB << ")" << std::endl;
   theCablesMB              += (dmb * theCablesFractionMB);
   theCopperMB              += (dmb * theCopperFractionMB);                       
   theH_ScintillatorMB      += (dmb * theH_ScintillatorFractionMB);       
@@ -599,8 +656,21 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   theStainlessSteelIL      += (dil * theStainlessSteelFractionIL);       
   theWCuIL                 += (dil * theWCuFractionIL);                             
   
+  if (!isHGCal){
+    for (auto x: myMaterialBudgetCategorizer->catNames){
+      theTrackerValuesMB.at(myMaterialBudgetCategorizer->materialIDs[x]) += (dmb * theTrackerFractionsMB.at(myMaterialBudgetCategorizer->materialIDs[x]));
+      theTrackerValuesIL.at(myMaterialBudgetCategorizer->materialIDs[x]) += (dil * theTrackerFractionsIL.at(myMaterialBudgetCategorizer->materialIDs[x]));
+    }
+  }
 
-
+  // std::cout << "------------------------------------------------" << std::endl;
+  // std::cout << " SUP " << theSupportMB  << "   " << theTrackerValuesMB[0] << std::endl;
+  // std::cout << " SEN " << theSensitiveMB  << "   " << theTrackerValuesMB[1] << std::endl;
+  // std::cout << " CAB " << theCablesMB  << "   " << theTrackerValuesMB[2] << std::endl;
+  // std::cout << " COL_SUP " << "-----"  << "   " << theTrackerValuesMB[3] << std::endl;
+  // std::cout << " OTHER " << theOtherMB  << "   " << theTrackerValuesMB[4] << std::endl;
+  // std::cout << " AIR " << theAirMB  << "   " << theTrackerValuesMB[5] << std::endl;
+  // std::cout << "------------------------------------------------" << std::endl;
   // rr
   
   theStepN++;

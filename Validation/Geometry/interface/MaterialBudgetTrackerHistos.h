@@ -10,7 +10,8 @@ class MaterialBudgetTrackerHistos : public MaterialBudgetFormat
   
   MaterialBudgetTrackerHistos( std::shared_ptr<MaterialBudgetData> data, 
 			       std::shared_ptr<TestHistoMgr> mgr,
-			       const std::string& fileName );
+			       const std::string& fileName,
+			       std::string geometry);
   ~MaterialBudgetTrackerHistos() override {}
   void fillStartTrack() override;
   void fillPerStep() override;
@@ -26,6 +27,8 @@ class MaterialBudgetTrackerHistos : public MaterialBudgetFormat
   double* theZ;
   double* theVoluId;
   double* theMateId;
+
+  std::vector<std::string> catNames;
 
   std::shared_ptr<TestHistoMgr> hmgr;
 

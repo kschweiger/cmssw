@@ -31,10 +31,25 @@ public:
   void dataPerStep( const G4Step* aStep );
 
   void SetAllStepsToTree();
+  void SetTrackerGeometry( std::string geometry);
  public:
   float getTotalMB() const {
     return theTotalMB; }
-  
+
+
+  float getTrackerFactionMD(int ID){
+    return theTrackerFractionsMB.at(ID);
+  }
+  float getTrackerFactionIL(int ID){
+    return theTrackerFractionsIL.at(ID);
+  }
+  float getTrackerValuesMD(int ID){
+    return theTrackerValuesMB.at(ID);
+  }
+  float getTrackerValuesIL(int ID){
+    return theTrackerValuesIL.at(ID);
+  }
+ 
   float getSupportFractionMB() const {
     return theSupportFractionMB; }
   float getSensitiveFractionMB() const {
@@ -457,6 +472,11 @@ public:
   float theOtherMB;
   float theAirMB;
 
+  std::vector<float> theTrackerFractionsMB;
+  std::vector<float> theTrackerFractionsIL;
+  std::vector<float> theTrackerValuesMB;
+  std::vector<float> theTrackerValuesIL;
+
   //HGCal MB
   float theCopperFractionMB;
   float theH_ScintillatorFractionMB;
@@ -555,6 +575,9 @@ public:
   std::array<float,MAXNUMBERSTEPS> theSiliconDil;
   std::array<float,MAXNUMBERSTEPS> theStainlessSteelDil;
   std::array<float,MAXNUMBERSTEPS> theWCuDil;
+
+  std::array<std::vector<float>, MAXNUMBERSTEPS> theTrackerValuesDmb;
+  std::array<std::vector<float>, MAXNUMBERSTEPS> theTrackerValuesDil;
   
   std::array<int,MAXNUMBERSTEPS> theVolumeID;
   std::array<std::string,MAXNUMBERSTEPS> theVolumeName;
@@ -615,7 +638,7 @@ public:
   int stepN;
   bool allStepsToTree;
   bool isHGCal;   //HGCal mode
-  
+  std::string trackerGeometry;
   double densityConvertionFactor;
 };
 

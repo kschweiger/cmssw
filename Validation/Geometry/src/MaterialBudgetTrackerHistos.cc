@@ -7,11 +7,25 @@ template <class T> const T& max ( const T& a, const T& b ) {
 
 MaterialBudgetTrackerHistos::MaterialBudgetTrackerHistos(std::shared_ptr<MaterialBudgetData> data,
 							 std::shared_ptr<TestHistoMgr> mgr,
-							 const std::string& fileName )
+							 const std::string& fileName,
+							 std::string geometry)
   : MaterialBudgetFormat( data ), 
     hmgr(mgr)
 {
   theFileName = fileName;
+  if (geometry == "phase1" ){
+    for (auto x: {"SUP", "SEN", "CAB", "COL", "ELE", "OTHER", "AIR"}){
+      catNames.push_back(x);
+    }
+  }
+  else if (geometry == "phase2"){
+    for (auto x: {"SUP", "SEN", "CAB", "COL_SUP", "OTHER", "AIR"}){
+      catNames.push_back(x);
+    }
+  }
+  else {
+    throw cms::Exception("BadConfig") <<" (MaterialBudgetTrackerHistos) Unsupported geometry: " << geometry;
+  }
   book();
 }
 
@@ -42,6 +56,41 @@ void MaterialBudgetTrackerHistos::book()
   hmgr->addHisto2( new TH2F("51", "R vs z " , nzbin, zMin, zMax, nrbin, rMin, rMax ) );
   hmgr->addHisto2( new TH2F("60", "MB prof local R  z;z [mm];R [mm];x/X_{0} ", nzbin, zMin, zMax, nrbin, rMin, rMax ) );
   hmgr->addHisto2( new TH2F("61", "R vs z " , nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+
+  int iCat = 1;
+  std::string iCatStr;
+  std::string hName;
+  std::string hTitle;
+  for (auto cat: catNames){
+    iCatStr = std::to_string(iCat);
+    hName = "9090"+iCatStr+"10"; hTitle = "MB prof Eta [ "+cat+" ];#eta;x/X_{0} ";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str(), 250, -5., 5. ) );
+    hName = "9090"+iCatStr+"11"; hTitle = "Eta [ "+cat+" ]" ;
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str(), 501, -5., 5. ) );
+    hName = "9090"+iCatStr+"20"; hTitle = "MB prof Phi [ "+cat+" ];#varphi [rad];x/X_{0} ";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str() , 180, -3.1416, 3.1416 ) );
+    hName = "9090"+iCatStr+"21"; hTitle = "Phi [ "+cat+" ]" ;
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str() , 180, -3.1416, 3.1416 ) );
+    hName = "9090"+iCatStr+"30"; hTitle = "MB prof Eta  Phi [ "+cat+" ];#eta;#varphi;x/X_{0} ";
+    hmgr->addHistoProf2( new TProfile2D(hName.c_str(), hTitle.c_str(), 250, -5., 5., 180, -3.1416, 3.1416 ) );
+    hName = "9090"+iCatStr+"31"; hTitle = "Eta vs Phi [ "+cat+" ]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), 501, -5., 5., 180, -3.1416, 3.1416 ) );
+    hName = "9090"+iCatStr+"40"; hTitle ="MB prof R [ "+cat+" ];R [mm];x/X_{0} ";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str(), 200, 0., 2000. ) );
+    hName = "9090"+iCatStr+"41"; hTitle = "R [ "+cat+" ]";
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str(), 200, 0., 2000. ) );
+    hName = "9090"+iCatStr+"50"; hTitle =  "MB prof sum R  z [ "+cat+" ];z [mm];R [mm];x/X_{0} ";
+    hmgr->addHistoProf2( new TProfile2D(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "9090"+iCatStr+"999"; hTitle = "Tot track length for MB [ "+cat+" ]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "9090"+iCatStr+"51"; hTitle = "R vs z [ "+cat+" ]" ;
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "9090"+iCatStr+"60"; hTitle ="MB prof local R  z;z [mm];R [mm];x/X_{0} [ "+cat+" ]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "9090"+iCatStr+"61"; hTitle = "R vs z [ "+cat+" ]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    iCat++;
+  }
   
   // Support
   hmgr->addHistoProf1( new TProfile("110", "MB prof Eta [Support];#eta;x/X_{0}", 250, -5.0, 5.0 ) );
@@ -138,7 +187,7 @@ void MaterialBudgetTrackerHistos::book()
   //
   
   // total Lambda0
-  hmgr->addHistoProf1( new TProfile("1010", "MB prof Eta [Total];#eta;#lambda/#lambda_{0} ", 250, -5., 5. ) );
+  hmgr->addHistoProf1( new TProfile("1010", "MB prof Eta [""];#eta;#lambda/#lambda_{0} ", 250, -5., 5. ) );
   hmgr->addHisto1( new TH1F("1011", "Eta " , 501, -5., 5. ) );
   hmgr->addHistoProf1( new TProfile("1020", "MB prof Phi [Total];#varphi [rad];#lambda/#lambda_{0} ", 180, -3.1416, 3.1416 ) );
   hmgr->addHisto1( new TH1F("1021", "Phi " , 180, -3.1416, 3.1416 ) );
@@ -153,6 +202,40 @@ void MaterialBudgetTrackerHistos::book()
   hmgr->addHisto2( new TH2F("1051", "R vs z " , nzbin, zMin, zMax, nrbin, rMin, rMax ) );
   hmgr->addHisto2( new TH2F("1060", "MB prof local R  z;z [mm];R [mm];x/X_{0} ", nzbin, zMin, zMax, nrbin, rMin, rMax ) );
   hmgr->addHisto2( new TH2F("1061", "R vs z " , nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+
+  // Categories
+  iCat = 1;
+  for (auto cat: catNames){
+    iCatStr = std::to_string(iCat);
+
+    hName = "90901"+iCatStr+"10"; hTitle = "MB prof Eta ["+cat+"];#eta;#lambda/#lambda_{0}";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str(), 250, -5.0, 5.0 ) );
+    hName = "90901"+iCatStr+"11" ; hTitle = "Eta ["+cat+"]";
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str() , 501, -5., 5. ) );
+    hName = "90901"+iCatStr+"20"; hTitle = "MB prof Phi ["+cat+"];#varphi [rad];#lambda/#lambda_{0}";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str(), 180, -3.1416, 3.1416 ) );
+    hName = "90901"+iCatStr+"21"; hTitle =  "Phi ["+cat+"]";
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str(), 180, -3.1416, 3.1416 ) );
+    hName = "90901"+iCatStr+"30"; hTitle =  "MB prof Eta  Phi ["+cat+"];#eta;#varphi;#lambda/#lambda_{0}";
+    hmgr->addHistoProf2( new TProfile2D(hName.c_str(), hTitle.c_str(), 250, -5., 5., 180, -3.1416, 3.1416 ) );
+    hName = "90901"+iCatStr+"31"; hTitle =  "Eta vs Phi ["+cat+"]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), 501, -5., 5., 180, -3.1416, 3.1416 ) );
+    hName = "90901"+iCatStr+ "40"; hTitle =  "MB prof R ["+cat+"];R [mm];#lambda/#lambda_{0}";
+    hmgr->addHistoProf1( new TProfile(hName.c_str(), hTitle.c_str(), 200, 0., 2000. ) );
+    hName = "90901"+iCatStr+"41"; hTitle =  "R ["+cat+"]";
+    hmgr->addHisto1( new TH1F(hName.c_str(), hTitle.c_str(), 200, 0., 2000. ) );
+    hName = "90901"+iCatStr+"50"; hTitle =  "MB prof sum R  z ["+cat+"];z [mm];R [mm];x/X_{0} ";
+    hmgr->addHistoProf2( new TProfile2D(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "90901"+iCatStr+"51"; hTitle =  "R vs z ["+cat+"]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "90901"+iCatStr+"60"; hTitle =  "MB prof local R  z ["+cat+"];z [mm];R [mm];x/X_{0} ";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+    hName = "90901"+iCatStr+"61"; hTitle =  "R vs z ["+cat+"]";
+    hmgr->addHisto2( new TH2F(hName.c_str(), hTitle.c_str(), nzbin, zMin, zMax, nrbin, rMin, rMax ) );
+  
+    iCat++;
+  }
+
   
   // Support
   hmgr->addHistoProf1( new TProfile("1110", "MB prof Eta [Support];#eta;#lambda/#lambda_{0}", 250, -5.0, 5.0 ) );
@@ -276,9 +359,20 @@ void MaterialBudgetTrackerHistos::fillEndTrack()
     hmgr->getHistoProf1(10)->Fill(theData->getEta(),theData->getTotalMB());
     hmgr->getHistoProf1(20)->Fill(theData->getPhi(),theData->getTotalMB());
     hmgr->getHistoProf2(30)->Fill(theData->getEta(),theData->getPhi(),theData->getTotalMB());
-    
+
+    int iCat = 1;
+    for (auto cat: catNames){
+      hmgr->getHisto1(9090000+(iCat*100)+11)->Fill(theData->getEta());
+      hmgr->getHisto1(9090000+(iCat*100)+21)->Fill(theData->getPhi());
+      hmgr->getHisto2(9090000+(iCat*100)+31)->Fill(theData->getEta(),theData->getPhi());
+      
+      hmgr->getHistoProf1(9090000+(iCat*100)+10)->Fill(theData->getEta(),theData->getTrackerValuesMD(iCat-1));
+      hmgr->getHistoProf1(9090000+(iCat*100)+20)->Fill(theData->getPhi(),theData->getTrackerValuesMD(iCat-1));
+      hmgr->getHistoProf2(9090000+(iCat*100)+30)->Fill(theData->getEta(),theData->getPhi(),theData->getTrackerValuesMD(iCat-1));
+      iCat++;
+    }
     // rr
-    
+
     // Support
     hmgr->getHisto1(111)->Fill(theData->getEta());
     hmgr->getHisto1(121)->Fill(theData->getPhi());
@@ -493,7 +587,19 @@ void MaterialBudgetTrackerHistos::fillEndTrack()
     hmgr->getHistoProf1(1010)->Fill(theData->getEta(),theData->getTotalIL());
     hmgr->getHistoProf1(1020)->Fill(theData->getPhi(),theData->getTotalIL());
     hmgr->getHistoProf2(1030)->Fill(theData->getEta(),theData->getPhi(),theData->getTotalIL());
-    
+
+    iCat = 1;
+    for (auto cat: catNames){
+      hmgr->getHisto1(90900000+1000+(iCat*100)+11)->Fill(theData->getEta());
+      hmgr->getHisto1(90900000+1000+(iCat*100)+21)->Fill(theData->getPhi());
+      hmgr->getHisto2(90900000+1000+(iCat*100)+31)->Fill(theData->getEta(),theData->getPhi());
+      
+      hmgr->getHistoProf1(90900000+1000+(iCat*100)+10)->Fill(theData->getEta(),theData->getTrackerValuesIL(iCat-1));
+      hmgr->getHistoProf1(90900000+1000+(iCat*100)+20)->Fill(theData->getPhi(),theData->getTrackerValuesIL(iCat-1));
+      hmgr->getHistoProf2(90900000+1000+(iCat*100)+30)->Fill(theData->getEta(),theData->getPhi(),theData->getTrackerValuesIL(iCat-1));
+      iCat++;
+    }
+
     // Support
     hmgr->getHisto1(1111)->Fill(theData->getEta());
     hmgr->getHisto1(1121)->Fill(theData->getPhi());

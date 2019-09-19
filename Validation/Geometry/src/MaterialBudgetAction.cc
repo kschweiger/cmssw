@@ -30,7 +30,7 @@
 
 //-------------------------------------------------------------------------
 MaterialBudgetAction::MaterialBudgetAction(const edm::ParameterSet& iPSet)
-{
+{  
   theData = std::make_shared<MaterialBudgetData>();
 
   edm::ParameterSet m_Anal = iPSet.getParameter<edm::ParameterSet>("MaterialBudgetAction");
@@ -65,6 +65,17 @@ MaterialBudgetAction::MaterialBudgetAction(const edm::ParameterSet& iPSet)
   theProcessToStop = m_Anal.getParameter<std::string>("StopAfterProcess");
   LogDebug("MaterialBudget") << "MaterialBudgetAction: stop at process " << theProcessToStop;
 
+
+  //----- Tracker geometry
+  std::string trackerGeometry = m_Anal.getParameter<std::string>("TrackerGeometry");
+  std::cout << "---------------------" << trackerGeometry << std::endl;
+  if( trackerGeometry != "None" ) {
+    edm::LogInfo("MaterialBudget") << "MaterialBudgetAction: Tracker geometry " << trackerGeometry;
+    theData->SetTrackerGeometry(trackerGeometry);
+  }
+  
+  
+  
   //---- Save histos to ROOT file 
   std::string saveToHistosFile = m_Anal.getParameter<std::string>("HistosFile");
   if( saveToHistosFile != "None" ) {
@@ -72,7 +83,7 @@ MaterialBudgetAction::MaterialBudgetAction(const edm::ParameterSet& iPSet)
     edm::LogInfo("MaterialBudget") << "MaterialBudgetAction: saving histograms to " << saveToHistosFile;
     theHistoMgr = std::make_shared<TestHistoMgr>();
     if(theHistoList == "Tracker" ) {
-      theHistos = std::make_shared<MaterialBudgetTrackerHistos>(theData, theHistoMgr, saveToHistosFile);
+      theHistos = std::make_shared<MaterialBudgetTrackerHistos>(theData, theHistoMgr, saveToHistosFile, trackerGeometry);
     }
     else if (theHistoList == "ECAL") {
       theHistos = std::make_shared<MaterialBudgetEcalHistos>(theData, theHistoMgr, saveToHistosFile);
@@ -224,7 +235,7 @@ void MaterialBudgetAction::update(const BeginOfTrack* trk)
       return;  
     }
   }
-  
+  std::cout << "doing dataSertTrack next" << std::endl;
   theData->dataStartTrack( aTrack );
 
   if (saveToTree) theTree->fillStartTrack();

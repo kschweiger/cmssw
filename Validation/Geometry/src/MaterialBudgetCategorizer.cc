@@ -12,7 +12,8 @@
 #include <fstream>
 #include <vector>
 
-MaterialBudgetCategorizer::MaterialBudgetCategorizer(std::string mode)
+MaterialBudgetCategorizer::MaterialBudgetCategorizer(std::string mode,
+						     std::string trackerGeometry)
 {
   //----- Build map volume name - volume index
   G4LogicalVolumeStore* lvs = G4LogicalVolumeStore::GetInstance();
@@ -22,15 +23,35 @@ MaterialBudgetCategorizer::MaterialBudgetCategorizer(std::string mode)
     theVolumeMap[(*ite)->GetName()] = ii++;
   }
 
+  useTrackerGeometry = trackerGeometry;
+  std::string theMaterialX0FileName;
+  std::string theMaterialL0FileName;
+  std::string thehgcalMaterialX0FileName;
+  std::string thehgcalMaterialL0FileName;
   if ( mode.compare("Tracker") == 0 ) {
-    std::string theMaterialX0FileName = edm::FileInPath("Validation/Geometry/data/trackerMaterials.x0").fullPath();
-    buildCategoryMap(theMaterialX0FileName, theX0Map);
-    std::string theMaterialL0FileName = edm::FileInPath("Validation/Geometry/data/trackerMaterials.l0").fullPath();
-    buildCategoryMap(theMaterialL0FileName, theL0Map);
+    if ( useTrackerGeometry == "phase1" ) {
+      theMaterialX0FileName = edm::FileInPath("Validation/Geometry/data/trackerMaterials.x0").fullPath();
+      buildCategoryMap(theMaterialX0FileName, theX0Map);
+      theMaterialL0FileName = edm::FileInPath("Validation/Geometry/data/trackerMaterials.l0").fullPath();
+      buildCategoryMap(theMaterialL0FileName, theL0Map);
+    } else if ( useTrackerGeometry == "phase2" ){
+      theMaterialX0FileName = edm::FileInPath("Validation/Geometry/data/RL").fullPath(); //Change file
+      std::cout << "----------------------------------------------------------------------------" << std::endl;
+      std::cout << "------------------------------------ X0 ------------------------------------" << std::endl;
+      std::cout << "----------------------------------------------------------------------------" << std::endl;
+      buildCategoryMap(theMaterialX0FileName, theX0Map);
+      theMaterialL0FileName = edm::FileInPath("Validation/Geometry/data/IL").fullPath(); //Change file
+      std::cout << "----------------------------------------------------------------------------" << std::endl;
+      std::cout << "------------------------------------ L0 ------------------------------------" << std::endl;
+      std::cout << "----------------------------------------------------------------------------" << std::endl;
+      buildCategoryMap(theMaterialL0FileName, theL0Map);
+    } else {
+      throw cms::Exception("BadConfig") <<" (MaterialBudgetCategorizer) Unsupported geometry: " << useTrackerGeometry;
+    }
   } else if ( mode.compare("HGCal") == 0 ){
-      std::string thehgcalMaterialX0FileName = edm::FileInPath("Validation/Geometry/data/hgcalMaterials.x0").fullPath();
+      thehgcalMaterialX0FileName = edm::FileInPath("Validation/Geometry/data/hgcalMaterials.x0").fullPath();
       buildHGCalCategoryMap(thehgcalMaterialX0FileName, theHGCalX0Map);
-      std::string thehgcalMaterialL0FileName = edm::FileInPath("Validation/Geometry/data/hgcalMaterials.l0").fullPath();
+      thehgcalMaterialL0FileName = edm::FileInPath("Validation/Geometry/data/hgcalMaterials.l0").fullPath();
       buildHGCalCategoryMap(thehgcalMaterialL0FileName, theHGCalL0Map);
   }
 }
@@ -44,38 +65,86 @@ void MaterialBudgetCategorizer::buildCategoryMap(std::string theMaterialFileName
   if (!theMaterialFile) 
     cms::Exception("LogicError") << " File not found " << theMaterialFileName;
   
-  float sup,sen,cab,col,ele,oth,air;
-  sup=sen=cab=col=ele=0.;
+  unsigned int nCats = 0;  // number of cats is cats in file. Air and other will be added independently
+  catNames.clear();
+  
+  int iAddedCat = 0;
+  if (useTrackerGeometry == "phase1"){
+    nCats = 5;
+    for (auto x: {"SUP", "SEN", "CAB", "COL", "ELE"}){
+      catNames.push_back(x);
+      materialIDs[x] = iAddedCat;
+      iAddedCat++;
+    }
+  } else if (useTrackerGeometry == "phase2"){
+    nCats = 4;
+    for (auto x: {"SUP", "SEN", "CAB", "COL_SUP"}){
+      catNames.push_back(x);
+      materialIDs[x] = iAddedCat;
+      iAddedCat++;
+    }
+  } else {
+    throw cms::Exception("BadConfig") <<" Unsupported geometry: " << useTrackerGeometry << "(But we should never even got here)";
+  }
+
+  catNames.push_back("OTH");
+  materialIDs["OTH"] = iAddedCat; iAddedCat++;
+  catNames.push_back("AIR");
+  materialIDs["AIR"] = iAddedCat; iAddedCat++;
+
+  nCategories = catNames.size();
+  for (unsigned int i = 0; i < nCategories; i++){
+    
+  }
+  
+  float materialCont[nCats+2];
+  for (unsigned int iCat = 0;iCat < nCats ;iCat++){
+    std::cout << iCat << " "<< catNames.at(iCat) << std::endl;
+    materialCont[iCat] = 0;
+  }
+
 
   std::string materialName;
-
+  float sum = 0;
+  
   while(theMaterialFile) {
     theMaterialFile >> materialName;
-    theMaterialFile >> sup >> sen >> cab >> col >> ele;
 
+    sum = 0;
+    for (unsigned int iCat = 0; iCat < nCats; iCat++){
+      theMaterialFile >> materialCont[iCat];
+      sum += materialCont[iCat];
+    }
+
+    
     if (materialName[0] == '#') //Ignore comments
       continue;
  
-    oth = 0.000;
-    air = 0.000;
+    materialCont[nCats] = 0.00; //other
+    materialCont[nCats+1] = 0.00; //air
+
+
+    /// ************************** TEMP ****************************
+    std::cout << "MaterialBudgetCategorizer: Material " << materialName << " filled: ";
+    for (unsigned int iCat = 0; iCat < nCats; iCat++){
+      std::cout << "\n\t" << catNames.at(iCat) << " " << materialCont[iCat];
+    }
+    std::cout << "\n\t" << catNames.at(nCats) << " " << materialCont[nCats];
+    std::cout << "\n\t" << catNames.at(nCats+1) << " " << materialCont[nCats+1];
+    std::cout << "\n\tSUM = " << sum <<std::endl;
+    std::cout << "===============================================================" << std::endl;
+    /// ***********************************************************
+
+    
     theMap[materialName].clear();        // clear before re-filling
-    theMap[materialName].push_back(sup); // sup
-    theMap[materialName].push_back(sen); // sen
-    theMap[materialName].push_back(cab); // cab
-    theMap[materialName].push_back(col); // col
-    theMap[materialName].push_back(ele); // ele
-    theMap[materialName].push_back(oth); // oth
-    theMap[materialName].push_back(air); // air
-    edm::LogInfo("MaterialBudget") 
-      << "MaterialBudgetCategorizer: Material " << materialName << " filled: " 
-      << "\n\tSUP " << sup 
-      << "\n\tSEN " << sen 
-      << "\n\tCAB " << cab 
-      << "\n\tCOL " << col 
-      << "\n\tELE " << ele 
-      << "\n\tOTH " << oth 
-      << "\n\tAIR " << air
-      << "\n\tAdd up to: " << sup + sen + cab + col + ele + oth + air;
+    for (unsigned int iCat = 0; iCat < nCats+2; iCat++){
+      theMap[materialName].push_back(materialCont[iCat]); // sup
+    }
+    edm::LogInfo("MaterialBudget") << "MaterialBudgetCategorizer: Material " << materialName << " filled: ";
+    for (unsigned int iCat = 0; iCat < nCats+2; iCat++){
+      edm::LogInfo("MaterialBudget") << "\t" << catNames.at(iCat) << " " <<  materialCont[iCat];
+    }
+    edm::LogInfo("MaterialBudget") << "\tAdd up to: " << sum;
   }
 }
 
