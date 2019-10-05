@@ -218,6 +218,7 @@ void MaterialBudgetData::dataEndTrack( const G4Track* aTrack )
 
 void MaterialBudgetData::dataPerStep( const G4Step* aStep )
 {
+ 
   assert(aStep);
   G4StepPoint* prePoint  = aStep->GetPreStepPoint();
   G4StepPoint* postPoint = aStep->GetPostStepPoint();
@@ -252,6 +253,19 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   int volumeID   = myMaterialBudgetCategorizer->volume( volumeName );
   int materialID = myMaterialBudgetCategorizer->material( materialName );
 
+  // Reset all fractions to 0
+  for (auto x: myMaterialBudgetCategorizer->catNames){
+    theTrackerFractionsMB.at(myMaterialBudgetCategorizer->materialIDs[x]) = 0.0;
+    theTrackerFractionsIL.at(myMaterialBudgetCategorizer->materialIDs[x]) = 0.0;
+  }
+  theSupportFractionMB     = 0.0;
+  theSensitiveFractionMB   = 0.0;
+  theCablesFractionMB      = 0.0;
+  theCoolingFractionMB     = 0.0;
+  theElectronicsFractionMB = 0.0;
+  theOtherFractionMB       = 0.0;
+  theAirFractionMB         = 0.0;
+  
   std::cout  << "MaterialBudgetData: Volume ID " << volumeID 
 	     << " Material ID " << materialID << std::endl;
   
@@ -410,13 +424,14 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
     theElectronicsDmb[theStepN] = (dmb * theElectronicsFractionMB);
     theOtherDmb[theStepN]       = (dmb * theOtherFractionMB);
 
+    
     if (!isHGCal){
+      
       for (auto x: myMaterialBudgetCategorizer->catNames){
-	theTrackerValuesDmb[theStepN].at(myMaterialBudgetCategorizer->materialIDs[x]) = (dmb * theTrackerFractionsMB.at(myMaterialBudgetCategorizer->materialIDs[x]));
+        theTrackerValuesDmb[theStepN].at(myMaterialBudgetCategorizer->materialIDs[x]) = (dmb * theTrackerFractionsMB.at(myMaterialBudgetCategorizer->materialIDs[x]));
 	theTrackerValuesDil[theStepN].at(myMaterialBudgetCategorizer->materialIDs[x]) = (dil * theTrackerFractionsIL.at(myMaterialBudgetCategorizer->materialIDs[x]));
       }   
     }
-    
     //HGCal
     theAirDmb[theStepN]                 = (dmb * theAirFractionMB);
     theCablesDmb[theStepN]              = (dmb * theCablesFractionMB);
@@ -664,6 +679,7 @@ void MaterialBudgetData::dataPerStep( const G4Step* aStep )
   }
 
   // std::cout << "------------------------------------------------" << std::endl;
+  // std::cout << " Total " << theTotalMB << std::endl; 
   // std::cout << " SUP " << theSupportMB  << "   " << theTrackerValuesMB[0] << std::endl;
   // std::cout << " SEN " << theSensitiveMB  << "   " << theTrackerValuesMB[1] << std::endl;
   // std::cout << " CAB " << theCablesMB  << "   " << theTrackerValuesMB[2] << std::endl;
